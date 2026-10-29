@@ -1,0 +1,80 @@
+.gh-wrap {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 12px;
+  text-align: center;
+  color: #f5e9ff;
+}
+.gh-title {
+  color: #f0abfc;
+  text-shadow: 0 0 12px #a855f7;
+}
+.gh-intro {
+  background: #1a0b2e;
+  border: 2px solid #a855f7;
+  text-align: left;
+  padding: 16px;
+}
+.gh-intro li {
+  margin: 6px 0;
+}
+.gh-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.gh-hud {
+  display: flex;
+  justify-content: space-around;
+  font-size: 1.1rem;
+  background: #1a0b2e;
+  border: 2px solid #ec4899;
+  border-radius: 8px;
+  padding: 8px;
+}
+.gh-low {
+  color: #f87171;
+  font-weight: bold;
+}
+.gh-warn {
+  min-height: 1.4em;
+  color: #fca5a5;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.gh-canvas {
+  width: 100%;
+  height: auto;
+  border: 3px solid #a855f7;
+  border-radius: 10px;
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.5);
+  touch-action: none;
+}
+.gh-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 64px);
+  grid-template-rows: repeat(2, 64px);
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.gh-pad-btn {
+  font-size: 1.6rem;
+  background: #2b0a4d;
+  color: #f0abfc;
+  border: 2px solid #ec4899;
+  border-radius: 12px;
+  touch-action: none;
+}
+.gh-pad-btn:active {
+  background: #ec4899;
+  color: #1a0b2e;
+}
+.gh-up { grid-column: 2; grid-row: 1; }
+.gh-left { grid-column: 1; grid-row: 2; }
+.gh-down { grid-column: 2; grid-row: 2; }
+.gh-right { grid-column: 3; grid-row: 2; }

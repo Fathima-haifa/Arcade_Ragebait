@@ -1,0 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { min-height: 100%; }
+body {
+  background: #0b0716;
+  color: #f4f0ff;
+  font-family: 'Courier New', monospace;
+  line-height: 1.5;
+}
+button { font-family: inherit; }
+:focus-visible { outline: 3px solid #ffe600; outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
