@@ -3,6 +3,7 @@ import './styles/arcade.css';
 import './styles/screens.css';
 import type { GameId } from './types/game';
 import { useProgress } from './state/ProgressContext';
+import Login from './screens/Login';
 import Landing from './screens/Landing';
 import GameSelect from './screens/GameSelect';
 import Achievements from './screens/Achievements';
@@ -15,7 +16,7 @@ import AfterlifeTrial from './games/heavenhell/AfterlifeTrial';
 import GhostHole from './games/ghosthole/GhostHole';
 import MadMaster from './games/madmaster/MadMaster';
 
-type Screen = 'landing' | 'select' | 'achievements' | 'settings' | GameId;
+type Screen = 'login' | 'landing' | 'select' | 'achievements' | 'settings' | GameId; // CHANGED: added 'login'
 
 const CORE = ['football', 'heavenhell', 'wronganswer', 'ghosthole'];
 const asList = (x: unknown): string[] => (Array.isArray(x) ? (x as string[]) : []);
@@ -41,10 +42,11 @@ function Locked({ onBack }: { onBack: () => void }) {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('landing');
+  const [screen, setScreen] = useState<Screen>('login'); // CHANGED: starts on 'login'
   const { progress, bossUnlocked, unlock } = useProgress();
   const back = () => setScreen('select');
   const built: Screen[] = [
+    'login', // NEW
     'landing',
     'select',
     'achievements',
@@ -71,6 +73,11 @@ export default function App() {
       unlock('arcade-legend');
     }
   }, [progress.achievements, progress.completedGames, unlock]);
+
+  // NEW: show the login page first; after login or guest, go to the landing page
+  if (screen === 'login') {
+    return <Login onEnter={() => setScreen('landing')} />;
+  }
 
   return (
     <div className="app">

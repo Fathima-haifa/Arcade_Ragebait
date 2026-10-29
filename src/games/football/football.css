@@ -53,3 +53,47 @@
 .fb-decoy:disabled { cursor: default; opacity: 1; }
 .fb-decoy.glow { filter: drop-shadow(0 0 10px #ffe600) drop-shadow(0 0 4px #fff); }
 .fb-decoy:not(:disabled):hover { transform: translateX(-50%) scale(1.15); }
+/* ---- Swipe layer ---- */
+.fb-swipe {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 6px; cursor: grab;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.fb-swipe span {
+  font-family: 'Press Start 2P', monospace; font-size: 9px; color: #fff;
+  background: rgba(0, 0, 0, .55); padding: 4px 8px;
+}
+
+/* ---- Reactions ---- */
+.fb-react { margin-top: 6px; color: #ffd54a; font-size: 14px; }
+
+/* ---- Fail panel ---- */
+.fb-fail, .fb-challenge {
+  background: #000; border: 3px solid #ff2e93; padding: 14px; margin-top: 12px;
+}
+.fb-fail h3, .fb-challenge h3 {
+  font-family: 'Press Start 2P', monospace; font-size: 13px; color: #ff2e93; margin: 0 0 10px;
+}
+.fb-fail-pts { font-size: 13px; opacity: .85; }
+.fb-fail-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+
+/* ---- Challenges ---- */
+.fb-ch-text { font-size: 16px; font-weight: bold; margin-bottom: 12px; }
+.fb-ch-react { color: #ffd54a; margin: 10px 0; }
+.fb-choices { display: grid; gap: 10px; }
+.fb-tapzone { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.fb-tapbtn {
+  font-size: 56px; line-height: 1; background: none; border: 3px dashed #ffd54a;
+  border-radius: 50%; width: 100px; height: 100px; cursor: pointer;
+  touch-action: manipulation; user-select: none;
+}
+.fb-tapbtn:active { transform: scale(.88); }
+.fb-tapcount { font-family: 'Press Start 2P', monospace; font-size: 12px; color: #ffd54a; }
+
+/* ---- Small screens ---- */
+@media (max-width: 480px) {
+  .fb { padding: 10px; }
+  .fb-fail-actions { grid-template-columns: 1fr; }
+  .fb-swipe span { font-size: 8px; }
+}

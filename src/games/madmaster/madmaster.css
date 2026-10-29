@@ -1,0 +1,48 @@
+.mm {
+  position: relative; overflow: hidden; padding: 16px;
+  border: 4px solid #ff7a00;
+  background: linear-gradient(#222226 0%, #4a1a0a 60%, #a03000 130%);
+  box-shadow: 0 0 24px rgba(255, 90, 0, .45);
+}
+.mm-top {
+  display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+  font-family: 'Press Start 2P', monospace; font-size: 11px; margin-bottom: 10px;
+}
+.mm-timer { background: #000; border: 2px solid #ff7a00; color: #ff7a00; padding: 8px 10px; }
+.mm-bars { display: grid; gap: 8px; margin-bottom: 12px; }
+.mm-label { display: flex; justify-content: space-between; font-size: 13px; }
+.mm-track { height: 18px; background: #000; border: 2px solid #fff; }
+.mm-fill { height: 100%; transition: width .15s; }
+.mm-fill.p { background: #7dff9b; }
+.mm-fill.b { background: #ff3b2f; }
+.mm-fill.s { background: #00e5ff; }
+.mm-arena {
+  position: relative; height: 210px; overflow: hidden; margin-bottom: 10px;
+  display: flex; justify-content: space-around; align-items: flex-end;
+  background: linear-gradient(#ffb04a, #ff5a00 55%, #26262a 56%);
+  border: 3px solid #fff;
+}
+.mm-fighter { font-size: 72px; line-height: 1; margin-bottom: 16px; transition: transform .15s; }
+.mm-fighter.boss.telegraph { transform: scale(1.15) translateX(-12px); }
+.mm-fighter.player.defending { transform: scale(.88); }
+.mm-fx { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
+.mm-fx.hit { background: rgba(255, 0, 0, .35); animation: mmflash .5s; }
+.mm-fx.block { background: rgba(0, 150, 255, .3); animation: mmflash .4s; }
+.mm-fx.parry { background: rgba(255, 230, 0, .35); animation: mmflash .5s; }
+.mm-fx.boss-hit { background: rgba(255, 255, 255, .2); animation: mmflash .3s; }
+.mm-fx.special { background: rgba(0, 229, 255, .3); animation: mmflash .6s; }
+@keyframes mmflash { from { opacity: 1; } to { opacity: 0; } }
+.mm-state {
+  background: #000; border: 2px solid #ff7a00; padding: 8px 10px; margin-bottom: 8px;
+  font-family: 'Press Start 2P', monospace; font-size: 11px; line-height: 1.6;
+}
+.mm-state.cue { background: #ffe600; color: #000; border-color: #fff; }
+.mm-tele { height: 10px; background: #000; border: 2px solid #fff; margin-bottom: 8px; }
+.mm-tele-fill { height: 100%; background: #ff3b2f; }
+.mm-msg { background: #000; border: 2px solid #ff2e93; padding: 10px; min-height: 56px; margin-bottom: 12px; }
+.mm-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.mm-controls .arc-btn {
+  min-height: 68px; font-size: 11px; touch-action: none;
+  -webkit-user-select: none; user-select: none;
+}
+.mm-tip { font-size: 13px; opacity: .85; margin-top: 10px; }

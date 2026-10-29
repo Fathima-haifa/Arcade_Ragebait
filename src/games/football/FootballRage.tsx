@@ -8,7 +8,7 @@ import {
   DIR_NAMES, KICKS, WIN_GOALS, OUTCOME_LABEL,
   goalMoved, hasDecoys, keeperSpots, resolveKick, hintFor,
   zoneWidth, meterStep, randomZoneCenter,
-  type Dir, type KickResult,
+  type Dir, type KickResult, type Outcome,
 } from './logic';
 
 interface Result {
@@ -19,11 +19,100 @@ interface Result {
   achievement?: string;
 }
 
+interface Fail {
+  message: string;
+  points: number;
+  reason: string;
+  achievement?: string;
+}
+
+type Challenge =
+  | { kind: 'confess'; text: string; button: string }
+  | { kind: 'choice'; text: string; options: string[] }
+  | { kind: 'tap'; text: string; icon: string; taps: number };
+
 type Phase = 'aim' | 'shuffle' | 'pick' | 'done';
 
 const X = [30, 50, 70];
 const DECOY_X = [34, 50, 66];
 const DIVE = ['left', 'center', 'right'] as const;
+
+const rnd = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+const REACTIONS: Record<Outcome, string[]> = {
+  goal: [
+    '🎉 The crowd goes wild. Your mum is crying.',
+    '🐐 Somebody call the Ballon d\'Or committee!',
+    '😳 Even the keeper clapped. Awkward.',
+  ],
+  saved: [
+    '🧤 The keeper blew you a kiss.',
+    '😭 So close. Not close at all, actually.',
+    '📉 Your confidence dropped 40%.',
+  ],
+  wide: [
+    '🚗 Your ball is now on a motorway.',
+    '🛰️ Houston, we have a wide shot.',
+  ],
+  miss: [
+    '🌌 The ball is now a satellite.',
+    '🙈 The cameraman looked away out of pity.',
+    '💨 That was less a shot, more a suggestion.',
+  ],
+  var: [
+    '📺 VAR is laughing at you in 4K.',
+    '🧐 The referee is consulting a horoscope.',
+  ],
+  decoy: [
+    '🤡 You trusted the wrong ball. Classic.',
+    '🔮 That ball was a lie. They all are.',
+  ],
+};
+
+const CHALLENGES: Challenge[] = [
+  { kind: 'confess', text: 'Admit it, you\'re not Cristiano Ronaldo.', button: 'Fine, I\'m not CR7 😭' },
+  { kind: 'confess', text: 'The goalkeeper owns you. Admit defeat.', button: 'He\'s my landlord now 💀' },
+  {
+    kind: 'choice',
+    text: 'Give us your official excuse.',
+    options: ['The ball moved first', 'The goalkeeper cheated', 'The goal was too far away'],
+  },
+  { kind: 'confess', text: 'Say it with me: the needle was fine, I was the problem.', button: 'The needle was fine 😔' },
+  { kind: 'confess', text: 'Sign the official surrender form.', button: 'I surrender (with dignity) 🏳️' },
+  { kind: 'choice', text: 'Who should we blame today?', options: ['The wind', 'The grass', 'My thumb'] },
+  { kind: 'choice', text: 'Rate your performance.', options: ['10/10 no notes', 'Aura: -500', 'Messi is shaking'] },
+  { kind: 'tap', text: 'Apologize to the ball. Tap it 8 times.', icon: '⚽', taps: 8 },
+  { kind: 'tap', text: 'Boost the keeper\'s ego. Tap the trophy 10 times.', icon: '🏆', taps: 10 },
+  { kind: 'confess', text: 'Promise to blame the referee, not yourself.', button: 'VAR did this 😤' },
+  {
+    kind: 'choice',
+    text: 'Pick your new career.',
+    options: ['Goalkeeper\'s assistant', 'Professional ball fetcher', 'Commentator who is always wrong'],
+  },
+  { kind: 'confess', text: 'Confess your biggest football crime.', button: 'I passed to the other team 🙈' },
+  { kind: 'tap', text: 'Charge your excuse battery. Tap it 12 times.', icon: '⚡', taps: 12 },
+  {
+    kind: 'choice',
+    text: 'Choose your walk-off music.',
+    options: ['Sad violin', 'Dramatic sigh', 'Silence (it hurts more)'],
+  },
+  { kind: 'confess', text: 'Wave at the goalkeeper. He earned it.', button: '👋 Hi, boss' },
+  {
+    kind: 'choice',
+    text: 'What did the ball say to you?',
+    options: ['Nothing, it ghosted me', 'Skill issue', 'I\'m leaving'],
+  },
+  { kind: 'tap', text: 'Polish the keeper\'s gloves. Tap them 7 times.', icon: '🧤', taps: 7 },
+];
+
+const CHALLENGE_DONE = [
+  'Challenge complete. Your dignity has left the building.',
+  'The goalkeeper accepted your apology. He did not mean it.',
+  'Noted. This has been filed under "Embarrassing".',
+  'Honesty detected. The referee is shocked.',
+  'Respect. Losing with style is a skill.',
+  'The crowd gave you a polite, sad clap. 👏',
+];
 
 function Keeper({ dive }: { dive: 'none' | 'left' | 'center' | 'right' }) {
   return (
@@ -52,7 +141,13 @@ function swapRandom(o: number[]): number[] {
   return o.map((p) => (p === a ? b : p === b ? a : p));
 }
 
-export default function FootballRage({ onBack }: { onBack: () => void }) {
+interface FootballProps {
+  onBack: () => void;
+  /** Called after a skip challenge is completed. Defaults to onBack. */
+  onComplete?: () => void;
+}
+
+export default function FootballRage({ onBack, onComplete }: FootballProps) {
   const { progress, award, completeGame, recordLoss, unlock } = useProgress();
   const [kick, setKick] = useState(0);
   const [score, setScore] = useState(0);
@@ -60,6 +155,12 @@ export default function FootballRage({ onBack }: { onBack: () => void }) {
   const [phase, setPhase] = useState<Phase>('aim');
   const [shot, setShot] = useState<{ dir: Dir; res: KickResult } | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+  const [fail, setFail] = useState<Fail | null>(null);
+  const [ch, setCh] = useState<Challenge | null>(null);
+  const [chDone, setChDone] = useState(false);
+  const [chReact, setChReact] = useState('');
+  const [taps, setTaps] = useState(0);
+  const [reaction, setReaction] = useState('');
   const [pos, setPos] = useState(0);
   const [zoneCenter, setZoneCenter] = useState(randomZoneCenter);
   const [attempts, setAttempts] = useState(0);
@@ -70,10 +171,13 @@ export default function FootballRage({ onBack }: { onBack: () => void }) {
   const dirRef = useRef(1);
   const hitRef = useRef(false);
   const finished = useRef(false);
+  const skipDone = useRef(false);
+  const lastCh = useRef(-1);
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
 
-const pity = Math.max(0, Math.min(attempts - 2, 5));
+  const pity = Math.max(0, Math.min(attempts - 2, 5));
   const width = zoneWidth(kick, pity);
-  const running = phase === 'aim' && result === null;
+  const running = phase === 'aim' && result === null && fail === null;
   const isLast = kick === KICKS - 1;
   const moved = goalMoved(kick);
   const spots = keeperSpots(kick);
@@ -99,7 +203,7 @@ const pity = Math.max(0, Math.min(attempts - 2, 5));
     const timers: number[] = [];
     setRevealing(true);
     timers.push(window.setTimeout(() => setRevealing(false), 1000));
-   const swaps = Math.max(5, 9 + kick - pity);
+    const swaps = Math.max(5, 9 + kick - pity);
     const gap = 220 + pity * 40;
     for (let i = 0; i < swaps; i++) {
       timers.push(window.setTimeout(() => setOrder((o) => swapRandom(o)), 1200 + i * gap));
@@ -108,9 +212,10 @@ const pity = Math.max(0, Math.min(attempts - 2, 5));
     return () => timers.forEach((t) => window.clearTimeout(t));
   }, [phase, kick, pity]);
 
-  const resolve = (ballOk: boolean) => {
-    const res = resolveKick(kick, aim, hitRef.current, pity, ballOk);
-    setShot({ dir: aim, res });
+  const resolve = (ballOk: boolean, d: Dir = aim) => {
+    const res = resolveKick(kick, d, hitRef.current, pity, ballOk);
+    setShot({ dir: d, res });
+    setReaction(rnd(REACTIONS[res.outcome]));
     setPhase('done');
     if (res.outcome === 'goal') setScore((s) => s + 1);
     if (res.outcome === 'wide' || res.outcome === 'var' || res.outcome === 'decoy') {
@@ -118,15 +223,18 @@ const pity = Math.max(0, Math.min(attempts - 2, 5));
     }
   };
 
-  const shoot = () => {
-    if (phase !== 'aim' || result) return;
+  // dir is given by a swipe; the SHOOT button and Space pass nothing
+  const shoot = (dir?: Dir) => {
+    if (phase !== 'aim' || result || fail) return;
+    const d = dir ?? aim;
+    setAim(d);
     hitRef.current = Math.abs(posRef.current - zoneCenter) <= width / 2;
     if (decoys) {
       setRealId(Math.floor(Math.random() * 3));
       setOrder([0, 1, 2]);
       setPhase('shuffle');
     } else {
-      resolve(true);
+      resolve(true, d);
     }
   };
 
@@ -157,8 +265,7 @@ const pity = Math.max(0, Math.min(attempts - 2, 5));
       setAttempts((a) => a + 1);
       const isNew = progress.losses + 1 >= 3 && !progress.achievements.includes('certified-victim');
       if (progress.losses + 1 >= 3) unlock('certified-victim');
-      setResult({
-        won,
+      setFail({
         message: `${score}/${KICKS} goals. The game has pity on you and made things slightly easier. Don't tell anyone.`,
         points: gave ? 10 : 0,
         reason: gave ? 'participation' : 'already claimed',
@@ -180,6 +287,7 @@ const pity = Math.max(0, Math.min(attempts - 2, 5));
     } else {
       setKick(kick + 1);
       setShot(null);
+      setReaction('');
       setPhase('aim');
       resetMeter();
     }
@@ -187,13 +295,67 @@ const pity = Math.max(0, Math.min(attempts - 2, 5));
 
   const replay = () => {
     finished.current = false;
+    skipDone.current = false;
     setKick(0);
     setScore(0);
     setAim(1);
     setShot(null);
+    setReaction('');
     setPhase('aim');
     setResult(null);
+    setFail(null);
+    setCh(null);
+    setChDone(false);
+    setTaps(0);
     resetMeter();
+  };
+
+  // ---- Skip challenges ----
+  const openChallenge = () => {
+    let i = Math.floor(Math.random() * CHALLENGES.length);
+    while (i === lastCh.current && CHALLENGES.length > 1) {
+      i = Math.floor(Math.random() * CHALLENGES.length);
+    }
+    lastCh.current = i;
+    setCh(CHALLENGES[i]);
+    setChDone(false);
+    setTaps(0);
+  };
+
+  const completeChallenge = () => {
+    setChReact(rnd(CHALLENGE_DONE));
+    setChDone(true);
+  };
+
+  const tapIcon = () => {
+    if (!ch || ch.kind !== 'tap' || chDone) return;
+    const n = taps + 1;
+    setTaps(n);
+    if (n >= ch.taps) completeChallenge();
+  };
+
+  const finishChallenge = () => {
+    if (skipDone.current) return;
+    skipDone.current = true;
+    award('football-skip', 10); // one-time, so no double rewards
+    completeGame('football');
+    (onComplete ?? onBack)();
+  };
+
+  // ---- Swipe to shoot: swipe up on the pitch, left/right to aim ----
+  const swipeDown = (e: React.PointerEvent) => {
+    swipeStart.current = { x: e.clientX, y: e.clientY };
+  };
+  const swipeUp = (e: React.PointerEvent) => {
+    const s = swipeStart.current;
+    swipeStart.current = null;
+    if (!s) return;
+    const dx = e.clientX - s.x;
+    const dy = e.clientY - s.y;
+    if (dy < -40) {
+      const d: Dir = dx < -35 ? 0 : dx > 35 ? 2 : 1;
+      shoot(d);
+    }
   };
 
   // Keyboard: arrows or A/S/D to aim, Space to shoot
@@ -242,7 +404,7 @@ const pity = Math.max(0, Math.min(attempts - 2, 5));
         <span className="fb-board">GOALS {score} (need {WIN_GOALS})</span>
       </div>
 
-      {warnings.length > 0 && phase === 'aim' && (
+      {warnings.length > 0 && phase === 'aim' && !fail && (
         <div className="fb-banner">⚠ {warnings.join(' ')}</div>
       )}
 
@@ -273,39 +435,107 @@ const pity = Math.max(0, Math.min(attempts - 2, 5));
         ) : (
           <div className="fb-ball" style={{ left: `${ballX}%`, bottom: ballBottom }} aria-hidden="true">⚽</div>
         )}
-      </div>
 
-      <div className="fb-msg" aria-live="polite">{message}</div>
-
-      <div className="fb-meter" aria-label="Timing meter">
-        <div className="fb-zone" style={{ left: `${zoneCenter - width / 2}%`, width: `${width}%` }} />
-        <div className="fb-needle" style={{ left: `${pos}%` }} />
-      </div>
-
-      <div className="fb-aim">
-        {([0, 1, 2] as Dir[]).map((d) => (
-          <ArcadeButton
-            key={d}
-            variant={aim === d ? 'primary' : 'normal'}
-            disabled={phase !== 'aim'}
-            onClick={() => setAim(d)}
+        {running && (
+          <div
+            className="fb-swipe"
+            onPointerDown={swipeDown}
+            onPointerUp={swipeUp}
+            onPointerCancel={() => { swipeStart.current = null; }}
+            aria-hidden="true"
           >
-            {DIR_NAMES[d]}
-          </ArcadeButton>
-        ))}
+            <span>⬆ SWIPE UP TO SHOOT</span>
+          </div>
+        )}
       </div>
 
-      {phase === 'aim' && (
-        <ArcadeButton variant="danger" onClick={shoot}>SHOOT!</ArcadeButton>
-      )}
-      {phase === 'done' && (
-        <ArcadeButton onClick={next}>{isLast ? 'See Results' : 'Next Kick'}</ArcadeButton>
+      <div className="fb-msg" aria-live="polite">
+        {message}
+        {shot && reaction && <div className="fb-react">{reaction}</div>}
+      </div>
+
+      {!fail && (
+        <>
+          <div className="fb-meter" aria-label="Timing meter">
+            <div className="fb-zone" style={{ left: `${zoneCenter - width / 2}%`, width: `${width}%` }} />
+            <div className="fb-needle" style={{ left: `${pos}%` }} />
+          </div>
+
+          <div className="fb-aim">
+            {([0, 1, 2] as Dir[]).map((d) => (
+              <ArcadeButton
+                key={d}
+                variant={aim === d ? 'primary' : 'normal'}
+                disabled={phase !== 'aim'}
+                onClick={() => setAim(d)}
+              >
+                {DIR_NAMES[d]}
+              </ArcadeButton>
+            ))}
+          </div>
+
+          {phase === 'aim' && (
+            <ArcadeButton variant="danger" onClick={() => shoot()}>SHOOT!</ArcadeButton>
+          )}
+          {phase === 'done' && (
+            <ArcadeButton onClick={next}>{isLast ? 'See Results' : 'Next Kick'}</ArcadeButton>
+          )}
+
+          <p className="fb-tip">
+            Swipe up on the pitch to shoot (swipe up-left or up-right to aim), or pick a side and press SHOOT
+            (or Space) when the needle is inside the green zone. Keys: Left / Up / Right or A / S / D.
+          </p>
+        </>
       )}
 
-      <p className="fb-tip">
-        Pick a side, then press SHOOT (or Space) when the needle is inside the green zone.
-        Keys: Left / Up / Right or A / S / D.
-      </p>
+      {fail && !ch && (
+        <div className="fb-fail" role="alert">
+          <h3>💀 YOU FAILED</h3>
+          <p>{fail.message}</p>
+          <p className="fb-fail-pts">
+            +{fail.points} Rage Points ({fail.reason})
+            {fail.achievement && <> · 🏅 {fail.achievement}</>}
+          </p>
+          <div className="fb-fail-actions">
+            <ArcadeButton variant="primary" onClick={replay}>TRY AGAIN</ArcadeButton>
+            <ArcadeButton variant="ghost" onClick={openChallenge}>SKIP CHALLENGE</ArcadeButton>
+          </div>
+        </div>
+      )}
+
+      {fail && ch && (
+        <div className="fb-challenge">
+          <h3>😈 SKIP CHALLENGE</h3>
+          <p className="fb-ch-text">{ch.text}</p>
+
+          {!chDone && ch.kind === 'confess' && (
+            <ArcadeButton variant="danger" onClick={completeChallenge}>{ch.button}</ArcadeButton>
+          )}
+
+          {!chDone && ch.kind === 'choice' && (
+            <div className="fb-choices">
+              {ch.options.map((o) => (
+                <ArcadeButton key={o} variant="normal" onClick={completeChallenge}>{o}</ArcadeButton>
+              ))}
+            </div>
+          )}
+
+          {!chDone && ch.kind === 'tap' && (
+            <div className="fb-tapzone">
+              <button className="fb-tapbtn" onClick={tapIcon} aria-label="Tap">{ch.icon}</button>
+              <div className="fb-tapcount">{taps}/{ch.taps}</div>
+            </div>
+          )}
+
+          {chDone && (
+            <>
+              <p className="fb-ch-react">{chReact}</p>
+              <p className="fb-fail-pts">+10 Rage Points (first skip only)</p>
+              <ArcadeButton variant="primary" onClick={finishChallenge}>CONTINUE</ArcadeButton>
+            </>
+          )}
+        </div>
+      )}
 
       <ResultModal
         open={result !== null}
