@@ -1,0 +1,83 @@
+.ach-wrap,
+.set-wrap {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 12px;
+  text-align: center;
+}
+.ach-count {
+  margin: 4px 0 14px;
+  opacity: 0.8;
+}
+.ach-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.ach-card {
+  padding: 14px 10px;
+  border: 2px dashed #555;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0.7;
+}
+.ach-got {
+  border: 2px solid #facc15;
+  opacity: 1;
+  box-shadow: 0 0 14px rgba(250, 204, 21, 0.35);
+}
+.ach-icon {
+  font-size: 2.2rem;
+}
+.ach-name {
+  font-weight: bold;
+  margin: 6px 0 4px;
+}
+.ach-how {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+.set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  padding: 14px;
+  margin-bottom: 12px;
+  border: 2px solid #555;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+}
+.set-label {
+  font-weight: bold;
+}
+.set-hint {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+.set-switch {
+  min-width: 70px;
+  padding: 10px 14px;
+  font-weight: bold;
+  border-radius: 999px;
+  border: 2px solid #888;
+  background: #333;
+  color: #ddd;
+  cursor: pointer;
+}
+.set-on {
+  background: #16a34a;
+  border-color: #86efac;
+  color: #fff;
+}
+
+/* Motion OFF: stops every animation and transition in the whole app */
+.no-motion *,
+.no-motion *::before,
+.no-motion *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
