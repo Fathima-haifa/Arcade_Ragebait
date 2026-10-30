@@ -1,0 +1,335 @@
+.ff {
+  --ff-dur: 5200ms;
+  --ff-cyan: #19e3ff;
+  --ff-ice: #bfeaff;
+  --ff-navy: #02060f;
+
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  overflow: hidden;
+  color: #fff;
+  background: var(--ff-navy);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  animation: ffExit var(--ff-dur) linear forwards;
+}
+.ff *,
+.ff *::before,
+.ff *::after {
+  box-sizing: border-box;
+}
+
+/* camera zoom */
+.ff-cam {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 55%;
+  animation: ffZoom var(--ff-dur) cubic-bezier(0.5, 0, 0.9, 0.6) forwards;
+}
+.ff-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 52%, rgba(25, 227, 255, 0.28) 0%, rgba(10, 23, 48, 0.9) 35%, var(--ff-navy) 75%);
+  animation: ffPulse 1.4s ease-in-out infinite alternate;
+}
+
+/* glowing arcade world below */
+.ff-world {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 46%;
+  opacity: 0;
+  transform: translateY(40%);
+  animation: ffWorld var(--ff-dur) ease-in forwards;
+}
+.ff-glow {
+  position: absolute;
+  left: 50%;
+  bottom: -20%;
+  width: 120%;
+  height: 100%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at 50% 100%, rgba(255, 255, 255, 0.95) 0%, rgba(25, 227, 255, 0.55) 22%, rgba(25, 227, 255, 0) 62%);
+}
+.ff-towers {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 38%;
+  height: 80%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2vmin;
+}
+.ff-tower {
+  width: 5vmin;
+  height: var(--h);
+  background: linear-gradient(180deg, rgba(25, 227, 255, 0.55), rgba(10, 23, 48, 0.95));
+  border: 1px solid rgba(191, 234, 255, 0.7);
+  box-shadow: 0 0 14px rgba(25, 227, 255, 0.5);
+}
+.ff-grid {
+  position: absolute;
+  left: -50%;
+  right: -50%;
+  bottom: 0;
+  height: 100%;
+  transform-origin: 50% 100%;
+  transform: perspective(40vmin) rotateX(62deg);
+  background-image:
+    linear-gradient(rgba(25, 227, 255, 0.7) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(25, 227, 255, 0.7) 1px, transparent 1px);
+  background-size: 6vmin 6vmin;
+  -webkit-mask-image: linear-gradient(to top, #000 20%, transparent 90%);
+  mask-image: linear-gradient(to top, #000 20%, transparent 90%);
+  animation: ffGrid 0.6s linear infinite;
+}
+
+/* tunnel rings */
+.ff-tunnel {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.ff-ring {
+  position: absolute;
+  width: 56vmin;
+  height: 56vmin;
+  border: 2px solid var(--ff-cyan);
+  border-radius: 18%;
+  box-shadow: 0 0 24px rgba(25, 227, 255, 0.7), inset 0 0 24px rgba(25, 227, 255, 0.35);
+  opacity: 0;
+  animation: ffRing 1.4s linear infinite;
+  animation-delay: calc(var(--i) * -0.175s);
+}
+.ff-ring:nth-child(even) {
+  border-color: var(--ff-ice);
+}
+
+/* speed lines */
+.ff-streaks {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 0;
+  height: 0;
+}
+.ff-streak {
+  position: absolute;
+  left: -1px;
+  top: 0;
+  width: 2px;
+  height: 26vmin;
+  transform-origin: 50% 0;
+  background: linear-gradient(180deg, transparent, var(--ff-ice) 60%, #fff);
+  opacity: 0;
+  animation: ffStreak var(--d) linear infinite;
+  animation-delay: var(--dl);
+}
+
+/* rising sparks */
+.ff-sparks {
+  position: absolute;
+  inset: 0;
+}
+.ff-spark {
+  position: absolute;
+  bottom: -30px;
+  left: var(--x);
+  width: var(--s);
+  height: calc(var(--s) * 5);
+  border-radius: 99px;
+  background: var(--ff-ice);
+  box-shadow: 0 0 10px var(--ff-cyan), 0 0 3px #fff;
+  opacity: 0;
+  animation: ffSpark var(--d) linear infinite;
+  animation-delay: var(--dl);
+}
+.ff-spark:nth-child(3n) {
+  background: var(--ff-cyan);
+}
+
+/* the falling character */
+.ff-hero {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  translate: -50% -50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  animation: ffFall var(--ff-dur) ease-in-out forwards;
+}
+.ff-hero > svg,
+.ff-hero > img {
+  width: clamp(70px, 17vmin, 160px);
+  height: auto;
+  filter: drop-shadow(0 0 14px var(--ff-cyan)) drop-shadow(0 0 30px rgba(25, 227, 255, 0.6));
+}
+.ff-faller {
+  fill: #06142a;
+  stroke: var(--ff-cyan);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ff-name {
+  margin: 0;
+  max-width: 80vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(0.6rem, 1.8vmin + 0.3rem, 0.9rem);
+  letter-spacing: 0.3em;
+  color: var(--ff-ice);
+  text-shadow: 0 0 10px var(--ff-cyan);
+}
+
+/* HUD, progress, skip */
+.ff-hud {
+  position: absolute;
+  top: clamp(0.8rem, 3vh, 1.6rem);
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  color: var(--ff-ice);
+  text-shadow: 0 0 10px var(--ff-cyan);
+  animation: ffBlink 1.2s ease-in-out infinite;
+}
+.ff-bar {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: clamp(1rem, 4vh, 2rem);
+  height: 3px;
+  background: rgba(191, 234, 255, 0.2);
+}
+.ff-bar::after {
+  content: '';
+  display: block;
+  height: 100%;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, var(--ff-cyan), #fff);
+  box-shadow: 0 0 10px var(--ff-cyan);
+  animation: ffBar var(--ff-dur) linear forwards;
+}
+.ff-skip {
+  position: absolute;
+  right: 1rem;
+  bottom: clamp(2rem, 8vh, 3.5rem);
+  padding: 0.5rem 0.9rem;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--ff-ice);
+  background: rgba(2, 6, 15, 0.6);
+  border: 1px solid rgba(25, 227, 255, 0.6);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.ff-skip:hover {
+  box-shadow: 0 0 14px rgba(25, 227, 255, 0.5);
+}
+.ff-skip:focus-visible {
+  outline: 3px solid #ffd60a;
+  outline-offset: 2px;
+}
+
+/* landing flash */
+.ff-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 60%, #fff 0%, #dff8ff 45%, #9eefff 100%);
+  opacity: 0;
+  animation: ffFlash var(--ff-dur) ease-in forwards;
+}
+
+/* simple reduced-motion version */
+.ff--calm {
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 50%, rgba(25, 227, 255, 0.22), var(--ff-navy) 70%);
+}
+.ff-calm-text {
+  margin: 0;
+  padding: 0 1rem;
+  text-align: center;
+  font-size: clamp(0.8rem, 3vw, 1.1rem);
+  letter-spacing: 0.3em;
+  color: var(--ff-ice);
+  text-shadow: 0 0 14px var(--ff-cyan);
+}
+
+/* keyframes */
+@keyframes ffExit {
+  0%, 90% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes ffZoom {
+  from { transform: scale(1) rotate(0deg); }
+  to { transform: scale(1.5) rotate(4deg); }
+}
+@keyframes ffPulse {
+  from { opacity: 0.75; }
+  to { opacity: 1; }
+}
+@keyframes ffWorld {
+  0%, 25% { opacity: 0; transform: translateY(40%); }
+  70% { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes ffGrid {
+  to { background-position: 0 6vmin; }
+}
+@keyframes ffRing {
+  0% { transform: scale(0.04) rotate(0deg); opacity: 0; }
+  12% { opacity: 1; }
+  100% { transform: scale(4.2) rotate(40deg); opacity: 0; }
+}
+@keyframes ffStreak {
+  0% { transform: rotate(var(--a)) translateY(4vmin) scaleY(0.1); opacity: 0; }
+  15% { opacity: 0.9; }
+  100% { transform: rotate(var(--a)) translateY(90vmax) scaleY(1.8); opacity: 0; }
+}
+@keyframes ffSpark {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translate(var(--dx), -110vh); opacity: 0; }
+}
+@keyframes ffFall {
+  0% { transform: translateY(-4vmin) scale(1.15) rotate(-10deg); }
+  25% { transform: translateY(0) scale(1.05) rotate(7deg); }
+  55% { transform: translateY(3vmin) scale(0.9) rotate(-8deg); }
+  85% { transform: translateY(10vmin) scale(0.65) rotate(5deg); }
+  100% { transform: translateY(14vmin) scale(0.55) rotate(0deg); }
+}
+@keyframes ffBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+@keyframes ffBar {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes ffFlash {
+  0%, 76% { opacity: 0; }
+  90%, 100% { opacity: 1; }
+}
+/* hide the ground shadow while falling, add a brighter cyan glow */
+.ff-hero .pixel-avatar__shadow {
+  display: none;
+}
+
+.ff-hero .pixel-avatar {
+  filter: drop-shadow(0 0 14px rgba(111, 242, 255, 0.8));
+}

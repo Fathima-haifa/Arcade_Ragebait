@@ -1,0 +1,43 @@
+.pixel-avatar {
+  position: relative;
+  display: inline-block;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 8px rgba(111, 242, 255, 0.45));
+}
+
+.pixel-avatar svg {
+  display: block;
+  overflow: visible;
+}
+
+.pixel-avatar__shadow {
+  position: absolute;
+  left: 15%;
+  right: 15%;
+  bottom: -6px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  filter: blur(2px);
+  z-index: -1;
+}
+
+@keyframes pixel-float {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-8%); }
+  100% { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pixel-avatar--idle svg {
+    animation: none !important;
+  }
+}
+.cs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}

@@ -1,42 +1,67 @@
 import { useEffect, useRef, useState } from 'react';
 import './madmaster.css';
 import ArcadeButton from '../../components/ArcadeButton';
-import ResultModal from '../../components/ResultModal';
+import CharacterAvatar from '../../components/CharacterAvatar';
+import { CHARACTERS } from '../../state/character';
+import type { CharacterId } from '../../state/character';
 import { useProgress } from '../../state/ProgressContext';
-import { achievementName } from '../../state/achievements';
 import {
-  PLAYER_MAX, BOSS_MAX, PARRY_MS, newFight, tick, playerAttack, playerSpecial,
-  type Fight,
+  PLAYER_MAX, BOSS_MAX, ENERGY_CAP, SPECIAL_COST,
+  newFight, tick, playerAttack, playerSpecial, playerDefend,
+  type Fight, type Phase,
 } from './combat';
 
-interface Result {
-  won: boolean;
-  message: string;
-  points: number;
-  reason: string;
-  achievement?: string;
+export function BossSprite({ phase = 1, className = '' }: { phase?: Phase; className?: string }) {
+  const eye = phase === 3 ? '#ffffff' : '#19e3ff';
+  return (
+    <svg className={`mm-sprite ${className}`} viewBox="0 0 24 30" shapeRendering="crispEdges" aria-hidden="true">
+      <rect x="8" y="2" width="8" height="4" fill="#0b1a3a" />
+      <rect x="6" y="6" width="12" height="6" fill="#0b1a3a" />
+      <rect x="8" y="7" width="8" height="4" fill="#000" />
+      <rect x="9" y="8" width="2" height="2" fill={eye} />
+      <rect x="13" y="8" width="2" height="2" fill={eye} />
+      <rect x="4" y="12" width="16" height="14" fill="#0b1a3a" />
+      <rect x="4" y="12" width="16" height="1" fill="#19e3ff" />
+      <rect x="11" y="16" width="2" height="2" fill="#19e3ff" />
+      <rect x="2" y="24" width="3" height="4" fill="#0b1a3a" />
+      <rect x="19" y="24" width="3" height="4" fill="#0b1a3a" />
+      <rect x="0" y="15" width="5" height="3" fill="#0b1a3a" />
+      <rect x="0" y="17" width="6" height="4" fill="#030814" stroke="#e8f6ff" strokeWidth=".5" />
+      <rect x="1.5" y="18.2" width="2" height=".8" fill="#19e3ff" />
+      <rect x="6" y="26" width="4" height="4" fill="#061230" />
+      <rect x="14" y="26" width="4" height="4" fill="#061230" />
+    </svg>
+  );
 }
 
-export default function MadMaster({ onBack }: { onBack: () => void }) {
-  const { progress, award, completeGame, recordLoss, unlock } = useProgress();
-  const [stage, setStage] = useState<'intro' | 'fight'>('intro');
-  const fRef = useRef<Fight>(newFight());
-  const [fight, setFight] = useState<Fight>(fRef.current);
-  const [attempts, setAttempts] = useState(0);
-  const [result, setResult] = useState<Result | null>(null);
-  const heldRef = useRef(false);
-  const finished = useRef(false);
+interface Props {
+  character: CharacterId;
+  onBack: () => void;
+  onVictory: () => void;
+}
 
-  const pity = Math.min(attempts, 4);
+export default function MadMaster({ character, onBack, onVictory }: Props) {
+  const { progress, award, completeGame, unlock } = useProgress();
+  const [stage, setStage] = useState<'intro' | 'fight'>('intro');
+  const fRef = useRef<Fight>(newFight(progress.ragePoints));
+  const [fight, setFight] = useState<Fight>(fRef.current);
+  const rewarded = useRef(false);
+
+  const hero = CHARACTERS.find((c) => c.id === character) ?? CHARACTERS[0];
 
   const commit = (f: Fight) => {
     fRef.current = f;
     setFight(f);
   };
-  const doAttack = () => commit(playerAttack(fRef.current));
-  const doSpecial = () => commit(playerSpecial(fRef.current));
 
-  // Game loop
+  const start = () => {
+    unlock('boss-challenger');
+    rewarded.current = false;
+    commit(newFight(progress.ragePoints));
+    setStage('fight');
+  };
+
+  // Battle loop
   useEffect(() => {
     if (stage !== 'fight') return;
     let last = Date.now();
@@ -45,110 +70,42 @@ export default function MadMaster({ onBack }: { onBack: () => void }) {
       const dt = Math.min(100, now - last);
       last = now;
       if (fRef.current.status !== 'fighting') return;
-      const next = tick(fRef.current, dt, heldRef.current, pity);
+      const next = tick(fRef.current, dt);
       fRef.current = next;
       setFight(next);
     }, 50);
     return () => clearInterval(id);
-  }, [stage, pity]);
-
-  // Keyboard: J attack, K / Space defend (hold), L special
-  useEffect(() => {
-    if (stage !== 'fight') return;
-    const down = (e: KeyboardEvent) => {
-      const k = e.key.toLowerCase();
-      if (k === 'j' || k === 'z') doAttack();
-      else if (k === 'l' || k === 'x') doSpecial();
-      else if (k === 'k' || k === ' ') {
-        e.preventDefault();
-        heldRef.current = true;
-      }
-    };
-    const up = (e: KeyboardEvent) => {
-      const k = e.key.toLowerCase();
-      if (k === 'k' || k === ' ') {
-        e.preventDefault();
-        heldRef.current = false;
-      }
-    };
-    window.addEventListener('keydown', down);
-    window.addEventListener('keyup', up);
-    return () => {
-      window.removeEventListener('keydown', down);
-      window.removeEventListener('keyup', up);
-    };
   }, [stage]);
 
-  // Fight ended: give rewards once
+  // Rewards: recorded once only
   useEffect(() => {
-    if (stage !== 'fight' || fight.status === 'fighting' || finished.current) return;
-    finished.current = true;
-    heldRef.current = false;
-
-    if (fight.status === 'won') {
-      const gave = award('madmaster-win', 300);
-      completeGame('madmaster');
-      const isNew = !progress.achievements.includes('arcade-legend');
-      unlock('arcade-legend');
-      unlock('first-rage');
-      setResult({
-        won: true,
-        message: 'The Mad Master is defeated! He demands a rematch. The arcade bows to you.',
-        points: gave ? 300 : 0,
-        reason: gave ? 'first boss victory' : 'already claimed',
-        achievement: isNew ? achievementName('arcade-legend') : undefined,
-      });
-    } else {
-      const gave = award('madmaster-try', 10);
-      recordLoss();
-      setAttempts((a) => a + 1);
-      const isNew = progress.losses + 1 >= 3 && !progress.achievements.includes('certified-victim');
-      if (progress.losses + 1 >= 3) unlock('certified-victim');
-      setResult({
-        won: false,
-        message: `${fight.msg} Tip: start defending in the last half-second of his wind-up to PARRY.`,
-        points: gave ? 10 : 0,
-        reason: gave ? 'participation' : 'already claimed',
-        achievement: isNew ? achievementName('certified-victim') : undefined,
-      });
-    }
+    if (fight.status !== 'won' || rewarded.current) return;
+    rewarded.current = true;
+    award('madmaster-win', 300);
+    completeGame('madmaster');
+    unlock('first-rage');
+    unlock('arcade-legend');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fight.status, stage]);
+  }, [fight.status]);
 
-  const start = () => {
-    unlock('boss-challenger');
-    finished.current = false;
-    heldRef.current = false;
-    commit(newFight());
-    setResult(null);
-    setStage('fight');
-  };
-
-  const replay = () => start();
-
-  const pPct = (fight.playerHp / PLAYER_MAX) * 100;
-  const bPct = (fight.bossHp / BOSS_MAX) * 100;
-  const tele = fight.phase === 'telegraph';
-  const telePct = tele ? (1 - fight.phaseLeft / fight.phaseTotal) * 100 : 0;
-  const cue = tele && fight.phaseLeft <= PARRY_MS + 100;
-
-  let stateText = 'He is thinking about violence...';
-  if (tele) stateText = fight.kind === 'heavy' ? '!! HEAVY ATTACK !!' : '! ATTACK !';
-  if (fight.phase === 'recover') stateText = 'RECOVERING: he is open, hit him!';
-  if (fight.phase === 'stunned') stateText = 'STUNNED: free hits!';
-  if (cue) stateText = 'PARRY NOW! (hold Defend)';
+  // Move on to the ending after a short victory pause
+  useEffect(() => {
+    if (fight.status !== 'won') return;
+    const t = window.setTimeout(() => onVictory(), 1500);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fight.status]);
 
   if (stage === 'intro') {
     return (
       <section className="mm">
         <h2 className="screen-title">THE MAD MASTER</h2>
         <p className="mm-msg">
-          He has been waiting. He has snacks. He does not share.
+          {hero.name} versus the Mad Master. He has snacks. He does not share.
         </p>
         <p className="mm-tip">
-          Attack to chip him. Hold Defend to block. Start defending in the LAST HALF-SECOND of his
-          wind-up to PARRY and stun him. Every 4th move is a bluff (a feint). Fill the meter for a
-          Special.
+          ATTACK to hit him and charge energy. SPECIAL ATTACK hits hard and spends energy.
+          DEFEND when you see INCOMING. If you fall, the arcade gives you a second wind.
         </p>
         <div style={{ marginTop: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <ArcadeButton variant="danger" onClick={start}>FIGHT!</ArcadeButton>
@@ -158,72 +115,69 @@ export default function MadMaster({ onBack }: { onBack: () => void }) {
     );
   }
 
+  const tele = fight.telegraph > 0;
+
   return (
     <section className="mm">
-      <div className="mm-top">
-        <span>THE MAD MASTER</span>
-        <span className="mm-timer">⏱ {Math.ceil(fight.timeLeft / 1000)}s</span>
-      </div>
-
-      <div className="mm-bars">
-        <div>
-          <div className="mm-label"><span>YOU</span><span>{fight.playerHp} HP</span></div>
+      <div className="mm-hud">
+        <div className="mm-side">
+          <div className="mm-name">{hero.name.toUpperCase()}</div>
           <div className="mm-track" role="progressbar" aria-label="Your health"
             aria-valuemin={0} aria-valuemax={PLAYER_MAX} aria-valuenow={fight.playerHp}>
-            <div className="mm-fill p" style={{ width: `${pPct}%` }} />
+            <div className="mm-fill p" style={{ width: `${(fight.playerHp / PLAYER_MAX) * 100}%` }} />
           </div>
+          <div className="mm-track" role="progressbar" aria-label="Battle energy"
+            aria-valuemin={0} aria-valuemax={ENERGY_CAP} aria-valuenow={fight.energy}>
+            <div className="mm-fill e" style={{ width: `${(fight.energy / ENERGY_CAP) * 100}%` }} />
+          </div>
+          <div className="mm-small">HP {fight.playerHp} | ENERGY {fight.energy}/{ENERGY_CAP}</div>
         </div>
-        <div>
-          <div className="mm-label"><span>MAD MASTER</span><span>{fight.bossHp} HP</span></div>
+
+        <div className="mm-mid">
+          FINAL ROUND
+          <b>PHASE {fight.phase}</b>
+          RAGE {progress.ragePoints}
+        </div>
+
+        <div className="mm-side right">
+          <div className="mm-name">THE MAD MASTER</div>
           <div className="mm-track" role="progressbar" aria-label="Boss health"
             aria-valuemin={0} aria-valuemax={BOSS_MAX} aria-valuenow={fight.bossHp}>
-            <div className="mm-fill b" style={{ width: `${bPct}%` }} />
+            <div className="mm-fill b" style={{ width: `${(fight.bossHp / BOSS_MAX) * 100}%` }} />
           </div>
-        </div>
-        <div>
-          <div className="mm-label"><span>SPECIAL</span><span>{fight.meter >= 100 ? 'READY!' : `${fight.meter}%`}</span></div>
-          <div className="mm-track"><div className="mm-fill s" style={{ width: `${fight.meter}%` }} /></div>
+          <div className="mm-small">HP {fight.bossHp}</div>
         </div>
       </div>
 
-      <div className="mm-arena" aria-hidden="true">
-        <span className={`mm-fighter player ${fight.defending ? 'defending' : ''}`}>🥋</span>
-        <span className={`mm-fighter boss ${tele ? 'telegraph' : ''}`}>👺</span>
+      <div className="mm-arena">
+        <div className="mm-player">
+          <CharacterAvatar id={character} size={150} animated={false} />
+          {fight.shield > 0 && <div className="mm-shield" />}
+        </div>
+        <div className={`mm-boss p${fight.phase} ${tele ? 'tele' : ''}`}>
+          <BossSprite phase={fight.phase} />
+        </div>
         <div key={fight.fxId} className={`mm-fx ${fight.fx}`} />
       </div>
 
-      <div className={`mm-state ${cue ? 'cue' : ''}`}>{stateText}</div>
-      <div className="mm-tele"><div className="mm-tele-fill" style={{ width: `${telePct}%` }} /></div>
+      {tele && <div className="mm-warn">!! INCOMING: TAP DEFEND !!</div>}
       <div className="mm-msg" aria-live="polite">{fight.msg}</div>
 
       <div className="mm-controls">
-        <ArcadeButton variant="primary" onClick={doAttack}>⚔ ATTACK</ArcadeButton>
-        <ArcadeButton
-          onPointerDown={() => { heldRef.current = true; }}
-          onPointerUp={() => { heldRef.current = false; }}
-          onPointerLeave={() => { heldRef.current = false; }}
-          onPointerCancel={() => { heldRef.current = false; }}
-          onContextMenu={(e) => e.preventDefault()}
-        >
-          🛡 DEFEND (hold)
+        <ArcadeButton variant="primary" onClick={() => commit(playerAttack(fRef.current))}>
+          ATTACK
         </ArcadeButton>
-        <ArcadeButton variant="danger" disabled={fight.meter < 100} onClick={doSpecial}>
-          ⚡ SPECIAL
+        <ArcadeButton
+          variant="danger"
+          disabled={fight.energy < SPECIAL_COST}
+          onClick={() => commit(playerSpecial(fRef.current))}
+        >
+          SPECIAL ATTACK
+        </ArcadeButton>
+        <ArcadeButton disabled={fight.shieldCd > 0} onClick={() => commit(playerDefend(fRef.current))}>
+          DEFEND
         </ArcadeButton>
       </div>
-
-      <p className="mm-tip">Keys: J = attack, K or Space (hold) = defend, L = special.</p>
-
-      <ResultModal
-        open={result !== null}
-        won={result?.won ?? false}
-        message={result?.message ?? ''}
-        points={result?.points ?? 0}
-        reason={result?.reason}
-        achievement={result?.achievement}
-        onReplay={replay}
-        onBack={onBack}
-      />
     </section>
   );
 }
